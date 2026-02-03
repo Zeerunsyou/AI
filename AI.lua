@@ -935,6 +935,30 @@ local function getRandomEnemy()
 	return #list > 0 and list[math.random(#list)] or nil
 end
 
+local function isTargetStillValid(target)
+	if not target then
+		return false
+	end
+	if not target.Character then
+		return false
+	end
+
+	local hum = target.Character:FindFirstChildOfClass("Humanoid")
+	local hrp = target.Character:FindFirstChild("HumanoidRootPart")
+
+	if not hum or not hrp then
+		return false
+	end
+	if hum.Health <= 0 then
+		return false
+	end
+	if target.Team == LocalPlayer.Team then
+		return false
+	end
+
+	return true
+end
+
 local function followTarget(target)
 	if not Humanoid or Humanoid.Health <= 0 then
 		return
@@ -997,10 +1021,17 @@ local function followTarget(target)
 					end
 
 					repeat
+						if not isTargetStillValid(target) then
+							forceNewTarget = true
+							break
+						end
+
 						timedJump()
 						RunService.Heartbeat:Wait()
+
 					until (Root.Position - targetPos).Magnitude < 2.5
 						or (targetRoot.Position - targetPos).Magnitude > Settings.TARGET_REPATH_DISTANCE
+
 					lastPos = targetPos
 				end
 			end
@@ -1048,6 +1079,23 @@ RunService.Heartbeat:Connect(function()
 	end
 end)
 
+local function hasVisibleMesh(character)
+	for _, obj in ipairs(character:GetDescendants()) do
+		if obj:IsA("MeshPart") then
+			if obj.Transparency < 1 then
+				return true
+			end
+		elseif obj:IsA("SpecialMesh") then
+			local parent = obj.Parent
+			if parent and parent:IsA("BasePart") and parent.Transparency < 1 then
+				return true
+			end
+		end
+	end
+
+	return false
+end
+
 local function pickRandomAimPart(character)
 	local parts = Settings.camlockAimParts
 	if not parts or #parts == 0 then
@@ -1065,9 +1113,19 @@ local function pickRandomAimPart(character)
 end
 
 Players.PlayerAdded:Connect(function(player)
+	forceNewTarget = true
+
 	player:GetPropertyChangedSignal("Team"):Connect(function()
 		forceNewTarget = true
 	end)
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+	forceNewTarget = true
+
+	if lockedCamTarget == player then
+		lockedCamTarget = nil
+	end
 end)
 
 for _, player in ipairs(Players:GetPlayers()) do
