@@ -49,4 +49,4 @@ _G.AISettings = {
 	},
 }
 
-loadstring(game:HttpGet("https://linkholder.vercel.app/api/main", true))()
+loadstring(game:HttpGet("https://linkholder.vercel.app/api/raw/main.lua", true))()
